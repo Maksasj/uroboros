@@ -1,0 +1,25 @@
+name: "🎰 rust build and tests"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📚 checkout 
+      uses: actions/checkout@v4
+    
+    - name: 🏗️ build
+      run: cargo build --verbose
+      
+    - name: 🐦‍🔥 tests
+      run: cargo test --verbose

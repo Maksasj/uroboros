@@ -4,7 +4,7 @@ rust package for making parsers
 
 ## Overview
 
-> again, uroboros is a not a new python fork 
+> uroboros is a not a new python fork ? 
 
 ### Features
 - Macros for writing Backus–Naur form style grammars 

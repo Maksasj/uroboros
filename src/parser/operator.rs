@@ -1,3 +1,5 @@
+use std::process::Child;
+
 use crate::grammar::GrammaSymbols;
 
 use super::{ParseErr, ParseRes, ParseResult, ParseTree, Parser};
@@ -103,3 +105,37 @@ impl<T> Parser<T> for Many<T> {
         };
     }
 }
+
+pub struct SeqOf<T> {
+    childs: Vec<Box<dyn Parser<T>>>,
+}
+
+impl<T : 'static> SeqOf<T> {
+    pub fn new(childs: Vec<Box<dyn Parser<T>>>) -> Box<dyn Parser<T>> {
+        return Box::new(SeqOf { childs });
+    }
+}
+
+impl<T> Parser<T> for SeqOf<T> {
+    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+        let mut childs: Vec<Box<ParseTree<T>>> = vec![];
+
+        for child in self.childs.iter() {
+            let res = child.parse(tokens);
+
+            match res {
+                Ok(c) => childs.push(c.tree.unwrap()),
+                Err(_) => return Err(ParseErr::new("One of child parsers failed"))
+            }
+        }
+
+        Ok(ParseRes {
+            tree: Some(Box::new(ParseTree {
+                value: GrammaSymbols::Sigma, // Todo remove this, Probably this should be a non terminal SeqOf
+                childs: Some(childs)
+            })),
+            consumed: 0
+        })
+    }
+}
+

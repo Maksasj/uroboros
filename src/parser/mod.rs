@@ -1,10 +1,11 @@
 pub mod llgparser;
+pub mod operator;
 
 use std::fmt::Debug;
 use crate::grammar::GrammaSymbols;
 
 pub trait Parser<T> {
-    fn parse(&mut self, tokens: &Vec<(T, String)>) -> ParseResult<T> where T : PartialEq + Clone;
+    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone;
 }
 
 #[derive(Debug)]
@@ -40,67 +41,23 @@ impl<T> ParseTree<T> where T : Debug {
     }
 }
 
-pub type ParseResult<T> = Result<Option<Box<ParseTree<T>>>, ()>;
-
-pub struct TokenParser<T> {
-    expect: T
+#[derive(Debug)]
+pub struct ParseRes<T> {
+    pub tree: Option<Box<ParseTree<T>>>,
+    pub consumed: usize
 }
 
-impl<T : 'static> TokenParser<T> {
-    pub fn new(expect: T) -> Box<dyn Parser<T>> {
-        return Box::new(TokenParser {
-            expect: expect
-        });
+#[derive(Debug)]
+pub struct ParseErr {
+    message: String, // Better add a trace log
+}
+
+impl ParseErr {
+    pub fn new(message: &str) -> Self {
+        ParseErr {
+            message: String::from(message)
+        }
     }
 }
 
-impl<T> Parser<T> for TokenParser<T> {
-    fn parse(&mut self, tokens: &Vec<(T, String)>) -> ParseResult<T> where T : PartialEq + Clone {
-        if tokens.is_empty() {
-            return Err(());
-        }
-
-        if tokens[0].0 == self.expect {
-            return Ok(Some(Box::new(ParseTree {
-                value: GrammaSymbols::Terminal(self.expect.clone()),
-                childs: None
-            })));
-        }
-
-        Err(())
-    }
-}
-
-pub struct OrParser<T> {
-    left: Box<dyn Parser<T>>,
-    right: Box<dyn Parser<T>>
-}
-
-impl<T : 'static> OrParser<T> {
-    pub fn new(left: Box<dyn Parser<T>>, right: Box<dyn Parser<T>>) -> Box<dyn Parser<T>> {
-        let or: OrParser<T> = OrParser {
-            left: left,
-            right: right
-        };
-
-        return Box::new(or);
-    }
-}
-
-impl<T> Parser<T> for OrParser<T> {
-    fn parse(&mut self, tokens: &Vec<(T, String)>) -> ParseResult<T> where T : PartialEq + Clone {
-        let res1: Result<Option<Box<ParseTree<T>>>, ()> = (*self.left).parse(tokens);
-
-        if res1.is_ok()  {
-            return res1;
-        }
-
-        let res2: Result<Option<Box<ParseTree<T>>>, ()> = (*self.right).parse(tokens);
-
-        if res2.is_ok()  {
-            return res2;
-        }
-
-        Err(())
-    }
-}
+pub type ParseResult<T> = Result<ParseRes<T>, ParseErr>;

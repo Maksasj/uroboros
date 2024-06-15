@@ -1,31 +1,31 @@
+use std::usize;
+
 use crate::{grammar::{GrammaSymbols, Production}, sigma};
 
-use super::{ParseResult, ParseTree, Parser};
+use super::{ParseErr, ParseRes, ParseResult, ParseTree, Parser};
 
-pub struct LLGrammarParser<T> {
+pub struct LLGParser<T> {
     grammar: Vec<Production<T>>,
-    entry: GrammaSymbols<T>,
-    head: usize
+    entry: GrammaSymbols<T>
 }
 
-impl<T> LLGrammarParser<T> {
+impl<T> LLGParser<T> {
     pub fn new(grammar: Vec<Production<T>>, entry: GrammaSymbols<T>) -> Self {
-        LLGrammarParser {
+        LLGParser {
             grammar: grammar,
             entry: entry,
-            head: 0
         }
     }
 
-    fn parse_internal(&mut self, tokens: &Vec<(T, String)>, grammar: &Vec<Production<T>>, entry: &GrammaSymbols<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse_internal(&self, tokens: &Vec<T>, head: &mut usize, grammar: &Vec<Production<T>>, entry: &GrammaSymbols<T>) -> ParseResult<T> where T : PartialEq + Clone {
         match entry {
-            GrammaSymbols::<T>::NonTerminal(nonterm) => {
+            GrammaSymbols::<T>::NonTerminal(_) => {
                 for prod in grammar.iter() {
                     if prod.left != entry.clone() { 
                         continue; 
                     }
 
-                    let backup: usize = self.head;
+                    let backup: usize = *head;
                     let mut tree: Option<ParseTree<T>> = None;
 
                     for right in prod.right.iter() {
@@ -33,15 +33,15 @@ impl<T> LLGrammarParser<T> {
                         let mut suc: bool = true;
 
                         for symbol in right.iter() {
-                            let prod = self.parse_internal(tokens, grammar, &symbol.clone());
+                            let prod = self.parse_internal(tokens, head, grammar, &symbol.clone());
 
                             if prod.is_err() {
-                                self.head = backup;
+                                *head = backup;
                                 suc = false;
                                 break;
                             }
                             
-                            match prod.unwrap() {
+                            match prod.unwrap().tree {
                                 Some(child) => childs.push(child),
                                 None => { },
                             }
@@ -69,47 +69,60 @@ impl<T> LLGrammarParser<T> {
                     return match tree {
                         Some(t) => {
                             return match t.childs {
-                                Some(_) => Ok(Some(Box::new(t))),
-                                None => Ok(None),
+                                Some(_) => Ok(ParseRes {
+                                    tree: Some(Box::new(t)),
+                                    consumed: 0
+                                }),
+                                None => Ok(ParseRes {
+                                    tree: None,
+                                    consumed: 0
+                                }),
                             }
                         },
-                        None => Err(()),
+                        None => Err(ParseErr::new("Tree error")),
                     }
                 }
 
-                return Err(())
+                return Err(ParseErr::new("Failed to do something"));
             },
             GrammaSymbols::<T>::Terminal(token) => {
-                if self.head >= tokens.len() {
-                    return Err(())
+                if *head >= tokens.len() {
+                    return Err(ParseErr::new("Expected terminal but input is empty"));
                 }
 
-                if token.clone() == tokens[self.head].0 {
-                    self.head += 1;
+                if token.clone() == tokens[*head] {
+                    *head += 1;
 
                     let tree: ParseTree<T> = ParseTree {
                         value: entry.clone(),
                         childs: None
                     };
 
-                    return Ok(Some(Box::new(tree)));
+                    return Ok( ParseRes {
+                        tree: Some(Box::new(tree)),
+                        consumed: 0
+                    });
                 }
         
-                return Err(()); 
+                return Err(ParseErr::new("Expected terminal but got something else")); 
             },
             sigma!() => {
-                return Ok(None);
+                return Ok(ParseRes {
+                    tree: None,
+                    consumed: 0
+                });
             }
         }
     }
 }
 
-impl<T> Parser<T> for LLGrammarParser<T> {
-    fn parse(&mut self, tokens: &Vec<(T, String)>) -> ParseResult<T> where T : PartialEq + Clone {
+impl<T> Parser<T> for LLGParser<T> {
+    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
         // Rust ? Whyyyyyy ?
         let grammar: Vec<Production<T>> = self.grammar.clone();
         let entry: GrammaSymbols<T> = self.entry.clone();
+        let mut head = 0;
 
-        return self.parse_internal(tokens, &grammar, &entry);
+        return self.parse_internal(tokens, &mut head, &grammar, &entry);
     }
 }

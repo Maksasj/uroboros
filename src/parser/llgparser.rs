@@ -19,7 +19,7 @@ impl<T> LLGrammarParser<T> {
 
     fn parse_internal(&mut self, tokens: &Vec<(T, String)>, grammar: &Vec<Production<T>>, entry: &GrammaSymbols<T>) -> ParseResult<T> where T : PartialEq + Clone {
         match entry {
-            GrammaSymbols::<T>::NonTerminal(_) => {
+            GrammaSymbols::<T>::NonTerminal(nonterm) => {
                 for prod in grammar.iter() {
                     if prod.left != entry.clone() { 
                         continue; 
@@ -62,6 +62,8 @@ impl<T> LLGrammarParser<T> {
                                 childs: Some(childs)
                             });
                         }
+
+                        break;
                     }
 
                     return match tree {

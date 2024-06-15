@@ -1,65 +1,43 @@
-use std::result;
+pub mod ll_grammar_parser;
 
-use crate::{grammar::{GrammaSymbols, Production}, sigma};
+use std::fmt::Debug;
+use crate::grammar::GrammaSymbols;
 
-struct Parser {
-    head: usize
+pub trait Parser<T> {
+    fn parse(&mut self, tokens: &Vec<(T, String)>) -> ParseResult<T> where T : PartialEq + Clone;
 }
 
-type Result<T> = result::Result<T, ()>;
+#[derive(Debug)]
+pub struct ParseTree<T> {
+    value: GrammaSymbols<T>,
+    childs: Option<Vec<Box<ParseTree<T>>>>,
+}
 
-impl Parser {
-    fn new() -> Self {
-        Parser {
-            head: 0
+impl<T> ParseTree<T> where T : Debug {
+    fn debug_log_depth(&self, depth: u32) {
+        for _ in 0..depth {
+            print!("  ");
+        }
+
+        println!("{:?}", self.value);
+
+        match &self.childs {
+            Some(childs) => {
+                for child in childs.iter() {
+                    for _ in 0..depth {
+                        print!("  ");
+                    }
+                    
+                    child.debug_log_depth(depth + 1);
+                }
+            },
+            None => { },
         }
     }
 
-    fn parse<T>(&mut self, tokens: &Vec<(T, String)>, grammar: &Vec<Production<T>>, entry: &GrammaSymbols<T>) -> Result<()> where T : PartialEq + Clone {
-        match entry {
-            GrammaSymbols::<T>::NonTerminal(_) => {
-                for prod in grammar.iter() {
-                    if prod.left != entry.clone() { continue; }
-
-                    let backup: usize = self.head;
-
-                    let mut suc: bool = false;
-
-                    for right in prod.right.iter() {
-                        for symbol in right.iter() {
-                            if self.parse(tokens, grammar, &symbol.clone()).is_err() {
-                                self.head = backup;
-                                suc = false;
-                                break;
-                            } else {
-                                suc = true;
-                            }
-                        }
-                    }
-
-                    return match suc {
-                        true => Ok(()),
-                        false => Err(()),
-                    }
-                }
-
-                return Err(())
-            },
-            GrammaSymbols::<T>::Terminal(token) => {
-                if self.head >= tokens.len() {
-                    return Err(())
-                }
-
-                if token.clone() == tokens[self.head].0 {
-                    self.head += 1;
-                    return Ok(());
-                }
-        
-                return Err(()); 
-            },
-            sigma!() => {
-                return Ok(());
-            }
-        }
+    pub fn debug_log(&self) {
+        self.debug_log_depth(0);
     }
 }
+
+pub type ParseResult<T> = Result<Option<Box<ParseTree<T>>>, ()>;

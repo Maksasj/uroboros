@@ -28,3 +28,21 @@ macro_rules! prod {
         }
     };
 }
+
+#[macro_export]
+macro_rules! gram {
+    ($( ($left:literal => $( ($($right:expr),*) )|* )),* ) => {
+        vec![
+            $(
+                Production { 
+                    left: sym!($left),
+                    right: vec![
+                        $(
+                            vec![$( sym!($right), )*],
+                        )*
+                    ] 
+                }
+            ),*
+        ]
+    };
+}

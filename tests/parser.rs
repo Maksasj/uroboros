@@ -12,7 +12,7 @@ enum Token {
 
 #[cfg(test)]
 mod parser {
-    use uroboros::{gram, grammar::*, parser::{llgparser::LLGParser, operator::{Exact, Many, Or, SeqOf}, Parser}, sym};
+    use uroboros::{gram, grammar::*, parser::{llgparser::LLGParser, operator::{Eof, Exact, Many, Or, SeqOf}, Parser}, sym};
     
     use super::*;
 
@@ -78,5 +78,17 @@ mod parser {
         assert_eq!(true, parser.parse( &vec![ Token::OpenParan ] ).is_ok());
         assert_eq!(true, parser.parse( &vec![ Token::Equal ] ).is_err());
         assert_eq!(true, parser.parse( &vec![ ] ).is_err());
+    }
+
+    #[test]
+    fn eof_parser_0() {
+        let parser = Eof::new(); 
+
+        // Todo, wont work since for now child parsers do not consume tokens
+        assert_eq!(true, parser.parse( &vec![ Token::OpenParan, Token::OpenParan, Token::OpenParan ] ).is_err());
+        assert_eq!(true, parser.parse( &vec![ Token::OpenParan ] ).is_err());
+        assert_eq!(true, parser.parse( &vec![ Token::OpenParan ] ).is_err());
+        assert_eq!(true, parser.parse( &vec![ Token::Equal ] ).is_err());
+        assert_eq!(true, parser.parse( &vec![ ] ).is_ok());
     }
 }

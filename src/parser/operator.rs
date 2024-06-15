@@ -1,4 +1,4 @@
-use std::process::Child;
+use std::{marker::PhantomData, process::Child};
 
 use crate::grammar::GrammaSymbols;
 
@@ -138,4 +138,28 @@ impl<T> Parser<T> for SeqOf<T> {
         })
     }
 }
+
+pub struct Eof<T>(PhantomData<T>);
+
+impl<T : 'static> Eof<T> {
+    pub fn new() -> Box<dyn Parser<T>> {
+        return Box::new(Eof::<T> { 0: PhantomData });
+    }
+}
+
+impl<T> Parser<T> for Eof<T> {
+    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+        return match tokens.is_empty() {
+            true => Ok(ParseRes {
+                tree: Some(Box::new(ParseTree {
+                    value: GrammaSymbols::Sigma, // Todo remove this, Probably this should be a non terminal Eof
+                    childs: None
+                })),
+                consumed: 0
+            }),
+            false => Err(ParseErr::new("Expected end of input")),
+        };
+    }
+}
+
 

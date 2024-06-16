@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, process::Child};
+use std::marker::PhantomData;
 
 use crate::grammar::GrammaSymbols;
 
@@ -11,14 +11,12 @@ pub struct Exact<T> {
 
 impl<T : 'static> Exact<T> {
     pub fn new(expect: T) -> Box<dyn Parser<T>> {
-        return Box::new(Exact {
-            expect: expect
-        });
+        return Box::new(Exact { expect });
     }
 }
 
 impl<T> Parser<T> for Exact<T> {
-    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         if tokens.is_empty() {
             return Err(ParseErr::new("Expected token, but input is empty"));
         }
@@ -29,7 +27,7 @@ impl<T> Parser<T> for Exact<T> {
                     value: GrammaSymbols::Terminal(self.expect.clone()),
                     childs: None
                 })),
-                consumed: 0
+                consumed: 1
             });
         }
 
@@ -49,7 +47,7 @@ impl<T : 'static> Or<T> {
 }
 
 impl<T> Parser<T> for Or<T> {
-    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         let res1= (*self.left).parse(tokens);
 
         if res1.is_ok()  {
@@ -72,21 +70,23 @@ pub struct Many<T> {
 
 impl<T : 'static> Many<T> {
     pub fn new(child: Box<dyn Parser<T>>) -> Box<dyn Parser<T>> {
-        return Box::new(Many {
-            child: child
-        });
+        return Box::new(Many { child });
     }
 }
 
 impl<T> Parser<T> for Many<T> {
-    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         let mut childs: Vec<Box<ParseTree<T>>> = vec![];
+        let mut consumed: usize = 0;
 
         loop {
-            let child = self.child.parse(tokens);
+            let child = self.child.parse(&tokens[consumed..]);
 
             match child {
-                Ok(c) => childs.push(c.tree.unwrap()),
+                Ok(c) => {
+                    consumed += c.consumed;
+                    childs.push(c.tree.unwrap())
+                },
                 Err(_) => break
             }
         }
@@ -99,7 +99,7 @@ impl<T> Parser<T> for Many<T> {
                         value: GrammaSymbols::Sigma, // Todo remove this, Probably this should be a non terminal Many
                         childs: Some(childs)
                     })),
-                    consumed: 0
+                    consumed: consumed
                 })
             }
         };
@@ -117,14 +117,18 @@ impl<T : 'static> SeqOf<T> {
 }
 
 impl<T> Parser<T> for SeqOf<T> {
-    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         let mut childs: Vec<Box<ParseTree<T>>> = vec![];
+        let mut consumed: usize = 0;
 
         for child in self.childs.iter() {
-            let res = child.parse(tokens);
+            let res = child.parse(&tokens[consumed..]);
 
             match res {
-                Ok(c) => childs.push(c.tree.unwrap()),
+                Ok(c) => { 
+                    consumed += c.consumed;
+                    childs.push(c.tree.unwrap())
+                }
                 Err(_) => return Err(ParseErr::new("One of child parsers failed"))
             }
         }
@@ -134,7 +138,7 @@ impl<T> Parser<T> for SeqOf<T> {
                 value: GrammaSymbols::Sigma, // Todo remove this, Probably this should be a non terminal SeqOf
                 childs: Some(childs)
             })),
-            consumed: 0
+            consumed: consumed
         })
     }
 }
@@ -148,7 +152,7 @@ impl<T : 'static> Eof<T> {
 }
 
 impl<T> Parser<T> for Eof<T> {
-    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         return match tokens.is_empty() {
             true => Ok(ParseRes {
                 tree: Some(Box::new(ParseTree {

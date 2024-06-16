@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use crate::grammar::GrammaSymbols;
 
 pub trait Parser<T> {
-    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone;
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone;
 }
 
 #[derive(Debug)]

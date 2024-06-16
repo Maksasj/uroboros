@@ -17,7 +17,7 @@ impl<T> LLGParser<T> {
         }
     }
 
-    fn parse_internal(&self, tokens: &Vec<T>, head: &mut usize, grammar: &Vec<Production<T>>, entry: &GrammaSymbols<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse_internal(&self, tokens: &[T], head: &mut usize, grammar: &Vec<Production<T>>, entry: &GrammaSymbols<T>) -> ParseResult<T> where T : PartialEq + Clone {
         match entry {
             GrammaSymbols::<T>::NonTerminal(_) => {
                 for prod in grammar.iter() {
@@ -27,9 +27,12 @@ impl<T> LLGParser<T> {
 
                     let backup: usize = *head;
                     let mut tree: Option<ParseTree<T>> = None;
+                    let mut consumed: usize = 0;
 
                     for right in prod.right.iter() {
+                        consumed = 0;
                         let mut childs: Vec<Box<ParseTree<T>>> = vec![];
+
                         let mut suc: bool = true;
 
                         for symbol in right.iter() {
@@ -40,9 +43,13 @@ impl<T> LLGParser<T> {
                                 suc = false;
                                 break;
                             }
-                            
-                            match prod.unwrap().tree {
-                                Some(child) => childs.push(child),
+
+                            let parse_res = prod.unwrap();
+                            match parse_res.tree {
+                                Some(child) => {
+                                    consumed += parse_res.consumed;
+                                    childs.push(child)
+                                }
                                 None => { },
                             }
                         }
@@ -51,33 +58,26 @@ impl<T> LLGParser<T> {
                             continue;
                         }
                         
-                        if childs.is_empty() {
-                            tree = Some(ParseTree {
-                                value: entry.clone(),
-                                childs: None
-                            });
-                        } else {
-                            tree = Some(ParseTree {
-                                value: entry.clone(),
-                                childs: Some(childs)
-                            });
-                        }
+                        tree = Some(ParseTree {
+                            value: entry.clone(),
+                            childs: match childs.is_empty() {
+                                true => None,
+                                false => Some(childs)
+                            }
+                        });
 
                         break;
                     }
 
                     return match tree {
                         Some(t) => {
-                            return match t.childs {
-                                Some(_) => Ok(ParseRes {
-                                    tree: Some(Box::new(t)),
-                                    consumed: 0
-                                }),
-                                None => Ok(ParseRes {
-                                    tree: None,
-                                    consumed: 0
-                                }),
-                            }
+                            Ok(ParseRes {
+                                tree: match t.childs {
+                                    Some(_) => Some(Box::new(t)),
+                                    None => None
+                                },
+                                consumed: consumed
+                            })
                         },
                         None => Err(ParseErr::new("Tree error")),
                     }
@@ -100,7 +100,7 @@ impl<T> LLGParser<T> {
 
                     return Ok( ParseRes {
                         tree: Some(Box::new(tree)),
-                        consumed: 0
+                        consumed: 1
                     });
                 }
         
@@ -117,7 +117,7 @@ impl<T> LLGParser<T> {
 }
 
 impl<T> Parser<T> for LLGParser<T> {
-    fn parse(&self, tokens: &Vec<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         // Rust ? Whyyyyyy ?
         let grammar: Vec<Production<T>> = self.grammar.clone();
         let entry: GrammaSymbols<T> = self.entry.clone();

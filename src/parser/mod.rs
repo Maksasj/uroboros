@@ -47,16 +47,24 @@ pub struct ParseRes<T> {
     pub consumed: usize
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParseErr {
-    message: String, // Better add a trace log
+    trace_log: Vec<String>, // Better add a trace log
 }
 
 impl ParseErr {
     pub fn new(message: &str) -> Self {
         ParseErr {
-            message: String::from(message)
+            trace_log: vec![ String::from(message) ]
         }
+    }
+
+    pub fn forward(&self, message: &str) -> ParseErr {
+        let mut ret = self.clone();
+        
+        ret.trace_log.push(String::from(message));
+        
+        return ret;
     }
 }
 

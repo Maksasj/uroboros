@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Token {
     VariableLiteral,
@@ -24,4 +25,6 @@ mod grammar {
             ("num" => (Token::VariableLiteral))
         ].remove_left_recursion();
     }
+
+    // Todo, more grammar tests
 }

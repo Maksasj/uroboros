@@ -1,6 +1,7 @@
+use core::fmt;
 use std::marker::PhantomData;
 
-use crate::grammar::GrammaSymbols;
+use crate::{grammar::GrammaSymbols, sym};
 
 use super::{ParseErr, ParseRes, ParseResult, ParseTree, Parser};
 
@@ -9,16 +10,16 @@ pub struct Exact<T> {
     expect: T
 }
 
-impl<T : 'static> Exact<T> {
+impl<T : fmt::Debug + 'static> Exact<T> {
     pub fn new(expect: T) -> Box<dyn Parser<T>> {
         return Box::new(Exact { expect });
     }
 }
 
-impl<T> Parser<T> for Exact<T> {
+impl<T : fmt::Debug> Parser<T> for Exact<T> {
     fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         if tokens.is_empty() {
-            return Err(ParseErr::new("Expected token, but input is empty"));
+            return Err(ParseErr::new(format!("Expected token '{:?}' but input is empty", self.expect).as_str() ));
         }
         
         if tokens[0] == self.expect {
@@ -31,7 +32,7 @@ impl<T> Parser<T> for Exact<T> {
             });
         }
 
-        Err(ParseErr::new("Expected another token"))
+        Err(ParseErr::new(format!("Expected '{:?}' token but got '{:?}' token", self.expect, tokens[0]).as_str()))
     }
 }
 
@@ -60,7 +61,7 @@ impl<T> Parser<T> for Or<T> {
             return res2;
         }
 
-        Err(ParseErr::new("Expected token OR token"))
+        Err(ParseErr::new("Left and right or parser branches failed"))
     }
 }
 
@@ -92,11 +93,11 @@ impl<T> Parser<T> for Many<T> {
         }
 
         return match childs.len() {
-            0 => { Err(ParseErr::new("Expected many tokens, but got zero")) }
+            0 => { Err(ParseErr::new("Expected many matches but matched zero times")) }
             _ => {
                 Ok(ParseRes {
                     tree: Some(Box::new(ParseTree {
-                        value: GrammaSymbols::Sigma, // Todo remove this, Probably this should be a non terminal Many
+                        value: sym!("many"),
                         childs: Some(childs)
                     })),
                     consumed: consumed
@@ -129,13 +130,50 @@ impl<T> Parser<T> for SeqOf<T> {
                     consumed += c.consumed;
                     childs.push(c.tree.unwrap())
                 }
-                Err(_) => return Err(ParseErr::new("One of child parsers failed"))
+                Err(error) => return Err(error.forward("Child parser failed"))
             }
         }
 
         Ok(ParseRes {
             tree: Some(Box::new(ParseTree {
-                value: GrammaSymbols::Sigma, // Todo remove this, Probably this should be a non terminal SeqOf
+                value: sym!("seq_of"), // Todo remove this, Probably this should be a non terminal SeqOf
+                childs: Some(childs)
+            })),
+            consumed: consumed
+        })
+    }
+}
+pub struct Times<T> {
+    times: usize,
+    child: Box<dyn Parser<T>>,
+}
+
+impl<T : 'static> Times<T> {
+    pub fn new(times : usize, child: Box<dyn Parser<T>>) -> Box<dyn Parser<T>> {
+        return Box::new(Times { times, child });
+    }
+}
+
+impl<T> Parser<T> for Times<T> {
+    fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
+        let mut childs: Vec<Box<ParseTree<T>>> = vec![];
+        let mut consumed: usize = 0;
+    
+        for _ in 0..self.times {
+            let res = self.child.parse(&tokens[consumed..]);
+
+            match res {
+                Ok(c) => { 
+                    consumed += c.consumed;
+                    childs.push(c.tree.unwrap())
+                },
+                Err(error) => return Err(error.forward("Child parser failed"))
+            }
+        }
+
+        Ok(ParseRes {
+            tree: Some(Box::new(ParseTree {
+                value: sym!("times"),
                 childs: Some(childs)
             })),
             consumed: consumed
@@ -156,7 +194,7 @@ impl<T> Parser<T> for Eof<T> {
         return match tokens.is_empty() {
             true => Ok(ParseRes {
                 tree: Some(Box::new(ParseTree {
-                    value: GrammaSymbols::Sigma, // Todo remove this, Probably this should be a non terminal Eof
+                    value: sym!("eof"),
                     childs: None
                 })),
                 consumed: 0

@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Token {
     VariableLiteral,
@@ -12,12 +13,15 @@ enum Token {
 
 #[cfg(test)]
 mod parser {
-    use uroboros::{gram, grammar::*, parser::{llgparser::LLGParser, operator::{Eof, Exact, Many, Or, SeqOf}, Parser}, sym};
-    
+    // use uroboros::{gram, grammar::*, parser::{llgparser::LLGParser, operator::{Eof, Exact, Many, Or, SeqOf, Times}, Parser}, sym};
     use super::*;
 
     #[test]
     fn llgparser_0() {
+        use uroboros::{ gram, sym };
+        use uroboros::grammar::*;
+        use uroboros::parser::{llgparser::LLGParser, Parser};
+
         let grammar: Grammar<Token> = gram![
             ("expr" => ("term", Token::Equal, "term")),
             ("term" => ("term", Token::Plus, "num") | ("num")),
@@ -36,6 +40,10 @@ mod parser {
 
     #[test]
     fn llgparser_1() {
+        use uroboros::{ gram, sym };
+        use uroboros::grammar::*;
+        use uroboros::parser::{llgparser::LLGParser, Parser};
+
         let grammar: Grammar<Token> = gram![
             ("expr" => ("term", Token::Equal, "term")),
             ("term" => ("term", Token::Plus, "num") | ("num")),
@@ -51,6 +59,8 @@ mod parser {
     
     #[test]
     fn exact_parser_0() {
+        use uroboros::parser::operator::Exact;
+
         let parser = Exact::new(Token::Equal);
 
         assert!(parser.parse( &vec![ Token::Equal ] ).is_ok());
@@ -60,6 +70,8 @@ mod parser {
 
     #[test]
     fn exact_parser_1() {
+        use uroboros::parser::operator::Exact;
+
         let parser = Exact::<u8>::new(b'e');
 
         assert!(parser.parse( String::from("e").as_bytes() ).is_ok());
@@ -69,11 +81,9 @@ mod parser {
 
     #[test]
     fn or_parser_0() {
-        let parser = 
-            Or::new(
-            Exact::new(Token::OpenParan), 
-            Exact::new(Token::ClosenParan)
-            );
+        use uroboros::parser::operator::{Or, Exact};
+
+        let parser = Or::new(Exact::new(Token::OpenParan), Exact::new(Token::ClosenParan));
 
         assert_eq!(true, parser.parse( &vec![ Token::OpenParan ] ).is_ok());
         assert_eq!(true, parser.parse( &vec![ Token::ClosenParan ] ).is_ok());
@@ -82,6 +92,8 @@ mod parser {
 
     #[test]
     fn many_parser_0() {
+        use uroboros::parser::operator::{Many, Exact};
+
         let parser = Many::new(Exact::new(Token::OpenParan)); 
 
         assert_eq!(true, parser.parse( &vec![ Token::OpenParan ] ).is_ok());
@@ -93,6 +105,8 @@ mod parser {
 
     #[test]
     fn many_parser_1() {
+        use uroboros::parser::operator::{Many, Exact};
+
         let parser = Many::new(Exact::new(Token::OpenParan)); 
 
         assert_eq!(1, parser.parse( &vec![ Token::OpenParan ] ).unwrap().consumed);
@@ -104,6 +118,8 @@ mod parser {
 
     #[test]
     fn seqof_parser_0() {
+        use uroboros::parser::operator::{SeqOf, Exact};
+
         let parser = SeqOf::new(vec![ Exact::new(Token::OpenParan), Exact::new(Token::Equal) ]); 
 
         assert_eq!(true, parser.parse( &vec![ Token::OpenParan, Token::Equal, Token::OpenParan ] ).is_ok());
@@ -116,6 +132,8 @@ mod parser {
     
     #[test]
     fn seqof_parser_1() {
+        use uroboros::parser::operator::{SeqOf, Exact};
+
         let parser = SeqOf::new(vec![ Exact::new(Token::OpenParan), Exact::new(Token::Equal) ]); 
 
         assert_eq!(2, parser.parse( &vec![ Token::OpenParan, Token::Equal, Token::OpenParan ] ).unwrap().consumed);
@@ -124,6 +142,8 @@ mod parser {
 
     #[test]
     fn seqof_parser_2() {
+        use uroboros::parser::operator::{Many, SeqOf, Exact};
+
         let parser = Many::new(
             SeqOf::new(vec![ Exact::new(Token::OpenParan), Exact::new(Token::ClosenParan) ])
         ); 
@@ -136,6 +156,8 @@ mod parser {
 
     #[test]
     fn seqof_parser_3() {
+        use uroboros::parser::operator::{Or, Many, SeqOf, Exact};
+
         let parser = Many::new(
             Or::new(
                 SeqOf::new(vec![ Exact::new(b'A'), Exact::new(b'B') ]), 
@@ -147,9 +169,36 @@ mod parser {
         assert!(parser.parse( String::from("ABCDCDAB").as_bytes() ).is_ok());
         assert!(parser.parse( String::from("PBCDABABABCD").as_bytes() ).is_err());
     }
+    
+    #[test]
+    fn times_parser_0() {
+        use uroboros::parser::operator::{Times, Exact};
+
+        let parser = Times::new(2, Exact::new(Token::OpenParan)); 
+
+        assert_eq!(true, parser.parse( &vec![ Token::OpenParan, Token::OpenParan ] ).is_ok());
+        assert_eq!(true, parser.parse( &vec![ Token::OpenParan, Token::OpenParan, Token::OpenParan ] ).is_ok());
+        assert_eq!(true, parser.parse( &vec![ Token::OpenParan ] ).is_err());
+        assert_eq!(true, parser.parse( &vec![ Token::Equal, Token::OpenParan, Token::OpenParan ] ).is_err());
+        assert_eq!(true, parser.parse( &vec![ Token::Equal ] ).is_err());
+        assert_eq!(true, parser.parse( &vec![ ] ).is_err());
+    }
+
+    #[test]
+    fn times_parser_1() {
+        use uroboros::parser::operator::{Times, Exact};
+
+        let parser = Times::new(2, Exact::new(b'A')); 
+
+        assert!(parser.parse( String::from("AA").as_bytes() ).is_ok());
+        assert!(parser.parse( String::from("AAAA").as_bytes() ).is_ok());
+        assert!(parser.parse( String::from("AB").as_bytes() ).is_err());
+    }
 
     #[test]
     fn eof_parser_0() {
+        use uroboros::parser::operator::Eof;
+
         let parser = Eof::new(); 
 
         assert_eq!(true, parser.parse( &vec![ Token::OpenParan, Token::OpenParan, Token::OpenParan ] ).is_err());

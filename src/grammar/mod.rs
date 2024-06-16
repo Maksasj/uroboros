@@ -22,11 +22,11 @@ impl<T : std::fmt::Debug> GrammaSymbols<T> {
         }
     }
 
-    pub fn get_string(&self) -> &str {
-        match self {
-            GrammaSymbols::<T>::NonTerminal(s) => s,
-            GrammaSymbols::<T>::Terminal(_) => "Terminal",
-            GrammaSymbols::<T>::Sigma => "Sigma",
+    pub fn to_string(&self) -> String {
+        return match self {
+            GrammaSymbols::<T>::NonTerminal(nonterm) => format!("<{}>", nonterm),
+            GrammaSymbols::<T>::Terminal(term) => format!("{:?}", term),
+            GrammaSymbols::<T>::Sigma => String::from("ϵ"),
         }
     }
 }
@@ -53,6 +53,20 @@ impl<T> Production<T> where T : PartialEq + Clone {
         false
     }
 
+    pub fn is_left_recursive(&self) -> bool {
+        if self.right.len() <= 0 {
+            return false;
+        }
+
+        for right in self.right.iter() {
+            if self.is_result_left_recursive(&right) {
+                return true
+            }
+        }
+        
+        false
+    }
+
     pub fn get_recursive_rights(&self) -> Vec<Vec<GrammaSymbols<T>>> {
         let res: Vec<Vec<GrammaSymbols<T>>> = self.right
             .iter()
@@ -71,20 +85,6 @@ impl<T> Production<T> where T : PartialEq + Clone {
             .collect();
         
         res
-    }
-
-    pub fn is_left_recursive(&self) -> bool {
-        if self.right.len() <= 0 {
-            return false;
-        }
-
-        for right in self.right.iter() {
-            if self.is_result_left_recursive(&right) {
-                return true
-            }
-        }
-        
-        false
     }
 }
 
@@ -128,7 +128,7 @@ impl<T> GrammarTrait<T> for Grammar<T> where T : std::fmt::Debug + PartialEq + C
             }
 
             let a_left: GrammaSymbols::<T> = prod.left.clone();
-            let a_star_left: GrammaSymbols::<T> = GrammaSymbols::<T>::NonTerminal(format!("{}'", prod.left.get_string()));
+            let a_star_left: GrammaSymbols::<T> = GrammaSymbols::<T>::NonTerminal(format!("{}'", prod.left.to_string()));
 
             let a_right: Vec<Vec<GrammaSymbols<T>>> = prod
                 .get_not_recursive_rights()

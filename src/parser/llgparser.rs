@@ -31,8 +31,8 @@ impl<T> LLGParser<T> {
 
                     for right in prod.right.iter() {
                         consumed = 0;
-                        let mut childs: Vec<Box<ParseTree<T>>> = vec![];
 
+                        let mut childs: Vec<Box<ParseTree<T>>> = vec![];
                         let mut suc: bool = true;
 
                         for symbol in right.iter() {

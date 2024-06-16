@@ -59,6 +59,15 @@ mod parser {
     }
 
     #[test]
+    fn exact_parser_1() {
+        let parser = Exact::<u8>::new(b'e');
+
+        assert!(parser.parse( String::from("e").as_bytes() ).is_ok());
+        assert!(parser.parse( String::from("ee").as_bytes() ).is_ok());
+        assert!(parser.parse( String::from(";").as_bytes() ).is_err());
+    }
+
+    #[test]
     fn or_parser_0() {
         let parser = 
             Or::new(
@@ -123,6 +132,20 @@ mod parser {
         assert_eq!(4, parser.parse( &vec![ Token::OpenParan, Token::ClosenParan, Token::OpenParan, Token::ClosenParan ] ).unwrap().consumed);
         assert_eq!(6, parser.parse( &vec![ Token::OpenParan, Token::ClosenParan, Token::OpenParan, Token::ClosenParan, Token::OpenParan, Token::ClosenParan ] ).unwrap().consumed);
         assert_eq!(6, parser.parse( &vec![ Token::OpenParan, Token::ClosenParan, Token::OpenParan, Token::ClosenParan, Token::OpenParan, Token::ClosenParan, Token::Semicolon ] ).unwrap().consumed);
+    }
+
+    #[test]
+    fn seqof_parser_3() {
+        let parser = Many::new(
+            Or::new(
+                SeqOf::new(vec![ Exact::new(b'A'), Exact::new(b'B') ]), 
+            SeqOf::new(vec![ Exact::new(b'C'), Exact::new(b'D') ])
+            )
+        ); 
+
+        assert!(parser.parse( String::from("ABABABCDCDCD").as_bytes() ).is_ok());
+        assert!(parser.parse( String::from("ABCDCDAB").as_bytes() ).is_ok());
+        assert!(parser.parse( String::from("PBCDABABABCD").as_bytes() ).is_err());
     }
 
     #[test]

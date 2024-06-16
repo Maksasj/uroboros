@@ -12,8 +12,8 @@ Uroboros is a **Rust** package for making complex parsers with parser combinator
 
 Cool looking widgets 
 <img src="https://img.shields.io/github/license/Maksasj/uroboros" alt="license">
-<img src="https://img.shields.io/github/v/release/Maksasj/uroboros" alt="version">
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Maksasj/uroboros/rust)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Maksasj/uroboros/rust.yml)
+![GitHub Repo stars](https://img.shields.io/github/stars/Maksasj/uroboros?style=flat)
 
 ### Links
 1. Source code avaiable at [github.com/Maksasj/uroboros](https://github.com/Maksasj/uroboros)

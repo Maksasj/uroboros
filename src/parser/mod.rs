@@ -2,7 +2,7 @@ pub mod llgparser;
 pub mod operator;
 
 use std::fmt::Debug;
-use crate::grammar::GrammaSymbols;
+use crate::grammar::GrammaSymbol;
 
 pub trait Parser<T> {
     fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone;
@@ -10,7 +10,7 @@ pub trait Parser<T> {
 
 #[derive(Debug)]
 pub struct ParseTree<T> {
-    value: GrammaSymbols<T>, // This thing probably should not be an gramma sybols
+    value: GrammaSymbol<T>, // This thing probably should not be an gramma sybols
     childs: Option<Vec<Box<ParseTree<T>>>>,
 }
 

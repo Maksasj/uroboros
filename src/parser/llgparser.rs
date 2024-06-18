@@ -1,25 +1,25 @@
 use std::usize;
 
-use crate::{grammar::{GrammaSymbols, Production}, sigma};
+use crate::{grammar::{GrammaSymbol, Production}, sigma};
 
 use super::{ParseErr, ParseRes, ParseResult, ParseTree, Parser};
 
 pub struct LLGParser<T> {
     grammar: Vec<Production<T>>,
-    entry: GrammaSymbols<T>
+    entry: GrammaSymbol<T>
 }
 
 impl<T> LLGParser<T> {
-    pub fn new(grammar: Vec<Production<T>>, entry: GrammaSymbols<T>) -> Self {
+    pub fn new(grammar: Vec<Production<T>>, entry: GrammaSymbol<T>) -> Self {
         LLGParser {
             grammar: grammar,
             entry: entry,
         }
     }
 
-    fn parse_internal(&self, tokens: &[T], head: &mut usize, grammar: &Vec<Production<T>>, entry: &GrammaSymbols<T>) -> ParseResult<T> where T : PartialEq + Clone {
+    fn parse_internal(&self, tokens: &[T], head: &mut usize, grammar: &Vec<Production<T>>, entry: &GrammaSymbol<T>) -> ParseResult<T> where T : PartialEq + Clone {
         match entry {
-            GrammaSymbols::<T>::NonTerminal(_) => {
+            GrammaSymbol::<T>::NonTerminal(_) => {
                 for prod in grammar.iter() {
                     if prod.left != entry.clone() { 
                         continue; 
@@ -85,7 +85,7 @@ impl<T> LLGParser<T> {
 
                 return Err(ParseErr::new("Failed to do something"));
             },
-            GrammaSymbols::<T>::Terminal(token) => {
+            GrammaSymbol::<T>::Terminal(token) => {
                 if *head >= tokens.len() {
                     return Err(ParseErr::new("Expected terminal but input is empty"));
                 }
@@ -120,7 +120,7 @@ impl<T> Parser<T> for LLGParser<T> {
     fn parse(&self, tokens: &[T]) -> ParseResult<T> where T : PartialEq + Clone {
         // Rust ? Whyyyyyy ?
         let grammar: Vec<Production<T>> = self.grammar.clone();
-        let entry: GrammaSymbols<T> = self.entry.clone();
+        let entry: GrammaSymbol<T> = self.entry.clone();
         let mut head = 0;
 
         return self.parse_internal(tokens, &mut head, &grammar, &entry);

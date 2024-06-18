@@ -1,7 +1,7 @@
 use core::fmt;
 use std::marker::PhantomData;
 
-use crate::{grammar::GrammaSymbols, sym};
+use crate::{grammar::GrammaSymbol, sym};
 
 use super::{ParseErr, ParseRes, ParseResult, ParseTree, Parser};
 
@@ -25,7 +25,7 @@ impl<T : fmt::Debug> Parser<T> for Exact<T> {
         if tokens[0] == self.expect {
             return Ok(ParseRes {
                 tree: Some(Box::new(ParseTree {
-                    value: GrammaSymbols::Terminal(self.expect.clone()),
+                    value: GrammaSymbol::Terminal(self.expect.clone()),
                     childs: None
                 })),
                 consumed: 1

@@ -1,38 +1,38 @@
 mod macros;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum GrammaSymbols<T> {
+pub enum GrammaSymbol<T> {
     NonTerminal(String),
     Terminal(T),
     Sigma
 }
 
-impl<T : std::fmt::Debug> GrammaSymbols<T> {
+impl<T : std::fmt::Debug> GrammaSymbol<T> {
     fn debug_log_grammar_symbol(&self) {
         match self {
-            GrammaSymbols::NonTerminal(nonterm) => {
+            GrammaSymbol::NonTerminal(nonterm) => {
                 print!("<{}>", nonterm);
             },
-            GrammaSymbols::Terminal(term) => {
+            GrammaSymbol::Terminal(term) => {
                 print!("{:?}", term);
             },
-            GrammaSymbols::Sigma => {
-                print!("ϵ");
+            GrammaSymbol::Sigma => {
+                print!("ε");
             },
         }
     }
 
     pub fn to_string(&self) -> String {
         return match self {
-            GrammaSymbols::<T>::NonTerminal(nonterm) => format!("<{}>", nonterm),
-            GrammaSymbols::<T>::Terminal(term) => format!("{:?}", term),
-            GrammaSymbols::<T>::Sigma => String::from("ϵ"),
+            GrammaSymbol::<T>::NonTerminal(nonterm) => format!("<{}>", nonterm),
+            GrammaSymbol::<T>::Terminal(term) => format!("{:?}", term),
+            GrammaSymbol::<T>::Sigma => String::from("ε"),
         }
     }
 }
 
-type ProductionLeft<T> = GrammaSymbols<T>;
-type ProductionRight<T> = Vec<Vec<GrammaSymbols<T>>>; 
+type ProductionLeft<T> = GrammaSymbol<T>;
+type ProductionRight<T> = Vec<Vec<GrammaSymbol<T>>>; 
 
 #[derive(Debug, Clone)]
 pub struct Production<T> {
@@ -41,7 +41,7 @@ pub struct Production<T> {
 }
 
 impl<T> Production<T> where T : PartialEq + Clone {
-    fn is_result_left_recursive(&self, result: &Vec<GrammaSymbols<T>>) -> bool {
+    fn is_result_left_recursive(&self, result: &Vec<GrammaSymbol<T>>) -> bool {
         if result.len() <= 0 {
             return false;
         }
@@ -67,8 +67,8 @@ impl<T> Production<T> where T : PartialEq + Clone {
         false
     }
 
-    pub fn get_recursive_rights(&self) -> Vec<Vec<GrammaSymbols<T>>> {
-        let res: Vec<Vec<GrammaSymbols<T>>> = self.right
+    pub fn get_recursive_rights(&self) -> Vec<Vec<GrammaSymbol<T>>> {
+        let res: Vec<Vec<GrammaSymbol<T>>> = self.right
             .iter()
             .filter(| &right | self.is_result_left_recursive(right))
             .cloned()
@@ -77,8 +77,8 @@ impl<T> Production<T> where T : PartialEq + Clone {
         res
     }
 
-    pub fn get_not_recursive_rights(&self) -> Vec<Vec<GrammaSymbols<T>>> {
-        let res: Vec<Vec<GrammaSymbols<T>>> = self.right
+    pub fn get_not_recursive_rights(&self) -> Vec<Vec<GrammaSymbol<T>>> {
+        let res: Vec<Vec<GrammaSymbol<T>>> = self.right
             .iter()
             .filter(| &right | !self.is_result_left_recursive(right))
             .cloned()
@@ -127,10 +127,10 @@ impl<T> GrammarTrait<T> for Grammar<T> where T : std::fmt::Debug + PartialEq + C
                 continue;
             }
 
-            let a_left: GrammaSymbols::<T> = prod.left.clone();
-            let a_star_left: GrammaSymbols::<T> = GrammaSymbols::<T>::NonTerminal(format!("{}'", prod.left.to_string()));
+            let a_left: GrammaSymbol::<T> = prod.left.clone();
+            let a_star_left: GrammaSymbol::<T> = GrammaSymbol::<T>::NonTerminal(format!("{}'", prod.left.to_string()));
 
-            let a_right: Vec<Vec<GrammaSymbols<T>>> = prod
+            let a_right: Vec<Vec<GrammaSymbol<T>>> = prod
                 .get_not_recursive_rights()
                 .iter_mut()
                 .map(| right | {
@@ -139,7 +139,7 @@ impl<T> GrammarTrait<T> for Grammar<T> where T : std::fmt::Debug + PartialEq + C
                 })
                 .collect();
 
-            let mut a_star_right: Vec<Vec<GrammaSymbols<T>>> = prod
+            let mut a_star_right: Vec<Vec<GrammaSymbol<T>>> = prod
                 .get_recursive_rights()
                 .iter_mut()
                 .map(| right | {
@@ -148,7 +148,7 @@ impl<T> GrammarTrait<T> for Grammar<T> where T : std::fmt::Debug + PartialEq + C
                 })
                 .collect();
 
-            a_star_right.push(vec! [ GrammaSymbols::Sigma ]);
+            a_star_right.push(vec! [ GrammaSymbol::Sigma ]);
 
             new.push(Production {
                 left: a_left,
